@@ -10,7 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type { UserMemory } from "@/types/database";
 import type { ToolCallInfo } from "@/types/chat";
 
-const DEV_USER_ID = process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const DEV_USER_ID = (process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890").trim();
 const MAX_ITERATIONS = 10;
 
 async function loadUserMemories(): Promise<UserMemory[]> {

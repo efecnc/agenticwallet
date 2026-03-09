@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { v4 as uuidv4 } from "uuid";
 
-const DEV_USER_ID = process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-const DEV_WALLET_ID = process.env.DEV_WALLET_ID || "01a2b3c4-d5e6-7890-abcd-ef1234567890";
+const DEV_USER_ID = (process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890").trim();
+const DEV_WALLET_ID = (process.env.DEV_WALLET_ID || "01a2b3c4-d5e6-7890-abcd-ef1234567890").trim();
 
 function randomBetween(min: number, max: number): number {
   return Math.round((Math.random() * (max - min) + min) * 100) / 100;

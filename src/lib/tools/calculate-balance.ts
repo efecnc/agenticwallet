@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-const DEV_USER_ID = process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const DEV_USER_ID = (process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890").trim();
 
 interface CalculateParams {
   operation: "wallet_balance" | "total_spend" | "total_income" | "category_breakdown" | "merchant_total" | "average_daily_spend";

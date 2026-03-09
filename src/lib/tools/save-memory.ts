@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const DEV_USER_ID = process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const DEV_USER_ID = (process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890").trim();
 
 interface SaveMemoryParams {
   type: "fact" | "preference" | "rule" | "goal" | "pattern";

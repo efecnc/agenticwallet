@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-const DEV_USER_ID = process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-const DEV_WALLET_ID = process.env.DEV_WALLET_ID || "01a2b3c4-d5e6-7890-abcd-ef1234567890";
+const DEV_USER_ID = (process.env.DEV_USER_ID || "a1b2c3d4-e5f6-7890-abcd-ef1234567890").trim();
+const DEV_WALLET_ID = (process.env.DEV_WALLET_ID || "01a2b3c4-d5e6-7890-abcd-ef1234567890").trim();
 
 interface TransferParams {
   to_wallet_name: string;
