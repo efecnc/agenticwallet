@@ -8,11 +8,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const category = searchParams.get("category");
+    const isRecurring = searchParams.get("is_recurring");
+    const type = searchParams.get("type");
 
-    const { data, error, count } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("transactions")
       .select("*", { count: "exact" })
-      .eq("user_id", DEV_USER_ID)
+      .eq("user_id", DEV_USER_ID);
+
+    if (category) query = query.eq("category", category);
+    if (isRecurring === "true") query = query.eq("is_recurring", true);
+    if (type) query = query.eq("type", type);
+
+    const { data, error, count } = await query
       .order("occurred_at", { ascending: false })
       .range(offset, offset + limit - 1);
 

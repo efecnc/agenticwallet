@@ -79,4 +79,54 @@ export const geminiTools: any[] = [
       required: ["to_wallet_name", "amount", "reason"],
     },
   },
+  {
+    name: "calculate_safe_to_spend",
+    description: "Calculate how much the user can safely spend until their next payday. Accounts for upcoming recurring expenses and a safety buffer. Use this when the user asks about their budget or how much they can spend.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        payday_date: { type: "NUMBER", description: "Day of month when user gets paid (default 15)" },
+        safety_buffer: { type: "NUMBER", description: "Safety buffer in TRY to keep as reserve (default 500)" },
+      },
+    },
+  },
+  {
+    name: "propose_challenge",
+    description: "Propose a time-bound savings challenge to motivate the user. Creates a trackable challenge on their dashboard.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        challenge_type: { type: "STRING", description: "Type: no_spend (avoid merchant/category), save_amount (save specific amount), reduce_category (reduce spending in category)" },
+        description: { type: "STRING", description: "Human-readable challenge description in Turkish" },
+        target_merchant: { type: "STRING", description: "Merchant to avoid (for no_spend type)" },
+        target_category: { type: "STRING", description: "Category to reduce (for reduce_category type)" },
+        target_amount: { type: "NUMBER", description: "Amount to save in TRY (for save_amount type)" },
+        duration_days: { type: "NUMBER", description: "Challenge duration in days (default 7)" },
+        reward_message: { type: "STRING", description: "Motivational message for when challenge is completed" },
+      },
+      required: ["challenge_type", "description", "duration_days"],
+    },
+  },
+  {
+    name: "analyze_discounts",
+    description: "Analyze the user's transaction history to find discount patterns and savings. Compares per-merchant spending to historical averages to identify when the user paid less than usual. Use when the user asks about discounts, deals, or savings on purchases.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        merchant: { type: "STRING", description: "Optional: analyze a specific merchant only" },
+        period_days: { type: "NUMBER", description: "How many days of history to analyze (default 60)" },
+        threshold_pct: { type: "NUMBER", description: "Percentage below average to count as discount (default 20)" },
+      },
+    },
+  },
+  {
+    name: "get_calendar_events",
+    description: "Get upcoming financial calendar events for the next N days. Includes recurring bills, subscriptions, installment payments, payday, and user-saved events like birthdays. Use when the user asks about upcoming payments, their financial calendar, or what bills are due.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        days_ahead: { type: "NUMBER", description: "Number of days to look ahead (default 30)" },
+      },
+    },
+  },
 ];

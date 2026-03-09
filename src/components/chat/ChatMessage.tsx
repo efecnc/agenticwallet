@@ -2,19 +2,31 @@
 
 import type { ChatMessageUI } from "@/types/chat";
 import { motion } from "framer-motion";
-import { Bot, User, Flame, Sparkles } from "lucide-react";
+import { Bot, User, Flame, Sparkles, Heart, Wrench } from "lucide-react";
 
 function cleanDisplayContent(content: string): string {
   return content
     .replace(/^\[ROAST_MODE\]\s*/i, "")
-    .replace(/^\[MOTIVATION_MODE\]\s*/i, "");
+    .replace(/^\[MOTIVATION_MODE\]\s*/i, "")
+    .replace(/^\[ABI_MODE\]\s*/i, "");
 }
 
-function getMessageMode(content: string): "roast" | "motivation" | null {
+function getMessageMode(content: string): "roast" | "motivation" | "abi" | null {
   if (content.startsWith("[ROAST_MODE]")) return "roast";
   if (content.startsWith("[MOTIVATION_MODE]")) return "motivation";
+  if (content.startsWith("[ABI_MODE]")) return "abi";
   return null;
 }
+
+const toolLabels: Record<string, string> = {
+  query_transactions: "İşlemler",
+  calculate_balance: "Hesaplama",
+  save_memory: "Hafıza",
+  read_memory: "Arama",
+  transfer_to_savings: "Transfer",
+  calculate_safe_to_spend: "Bütçe",
+  propose_challenge: "Meydan Okuma",
+};
 
 export default function ChatMessage({ message }: { message: ChatMessageUI }) {
   const isUser = message.role === "user";
@@ -23,52 +35,68 @@ export default function ChatMessage({ message }: { message: ChatMessageUI }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
+      transition={{ duration: 0.2 }}
+      className={`flex gap-2.5 py-1.5 ${isUser ? "flex-row-reverse" : ""}`}
+      role="article"
+      aria-label={`${isUser ? "Senin" : "Parafin'in"} mesajı`}
     >
+      {/* Avatar */}
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ${
           isUser
-            ? mode === "roast"
-              ? "bg-orange-500/20"
-              : mode === "motivation"
-              ? "bg-emerald-500/20"
-              : "bg-brand-teal/20"
-            : "bg-white/10"
+            ? "bg-gradient-to-br from-brand-teal to-emerald-600"
+            : "bg-white/[0.06] border border-white/[0.08]"
         }`}
+        aria-hidden="true"
       >
         {isUser ? (
           mode === "roast" ? (
-            <Flame className="w-4 h-4 text-orange-400" />
+            <Flame className="w-3.5 h-3.5 text-white" />
           ) : mode === "motivation" ? (
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <Sparkles className="w-3.5 h-3.5 text-white" />
+          ) : mode === "abi" ? (
+            <Heart className="w-3.5 h-3.5 text-white" />
           ) : (
-            <User className="w-4 h-4 text-brand-teal" />
+            <User className="w-3.5 h-3.5 text-white" />
           )
         ) : (
-          <Bot className="w-4 h-4 text-slate-300" />
+          <Bot className="w-3.5 h-3.5 text-slate-400" />
         )}
       </div>
 
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? mode === "roast"
-              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-br-md"
-              : mode === "motivation"
-              ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-br-md"
-              : "bg-brand-teal text-white rounded-br-md"
-            : "bg-white/5 text-slate-200 rounded-bl-md"
-        }`}
-      >
-        <div className="whitespace-pre-wrap">{displayContent}</div>
+      {/* Message bubble */}
+      <div className={`max-w-[82%] ${isUser ? "items-end" : "items-start"}`}>
+        <div
+          className={`rounded-2xl px-4 py-2.5 text-[13.5px] leading-relaxed ${
+            isUser
+              ? mode === "roast"
+                ? "bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-tr-md shadow-lg shadow-orange-500/10"
+                : mode === "motivation"
+                ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-tr-md shadow-lg shadow-emerald-500/10"
+                : mode === "abi"
+                ? "bg-gradient-to-br from-violet-500 to-purple-500 text-white rounded-tr-md shadow-lg shadow-violet-500/10"
+                : "bg-gradient-to-br from-brand-teal to-emerald-600 text-white rounded-tr-md shadow-lg shadow-brand-teal/10"
+              : "bg-white/[0.05] text-slate-200 rounded-tl-md border border-white/[0.06]"
+          }`}
+        >
+          <div className="whitespace-pre-wrap break-words">{displayContent}</div>
+        </div>
 
+        {/* Tool calls indicator */}
         {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-white/10">
-            <div className="text-xs text-slate-400">
-              Used {message.toolCalls.length} tool{message.toolCalls.length > 1 ? "s" : ""}:{" "}
-              {message.toolCalls.map((tc) => tc.name).join(", ")}
+          <div className="flex items-center gap-1.5 mt-1.5 px-1">
+            <Wrench className="w-3 h-3 text-slate-600" aria-hidden="true" />
+            <div className="flex flex-wrap gap-1" aria-label="Kullanılan araçlar">
+              {message.toolCalls.map((tc, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] px-1.5 py-0.5 bg-white/[0.04] text-slate-500 rounded font-medium"
+                >
+                  {toolLabels[tc.name] || tc.name}
+                </span>
+              ))}
             </div>
           </div>
         )}

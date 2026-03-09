@@ -6,6 +6,10 @@ import { calculateBalance } from "@/lib/tools/calculate-balance";
 import { saveMemory } from "@/lib/tools/save-memory";
 import { readMemory } from "@/lib/tools/read-memory";
 import { transferToSavings } from "@/lib/tools/transfer-to-savings";
+import { calculateSafeToSpend } from "@/lib/tools/calculate-safe-to-spend";
+import { proposeChallenge } from "@/lib/tools/propose-challenge";
+import { analyzeDiscounts } from "@/lib/tools/analyze-discounts";
+import { getCalendarEvents } from "@/lib/tools/get-calendar-events";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { UserMemory } from "@/types/database";
 import type { ToolCallInfo } from "@/types/chat";
@@ -43,6 +47,14 @@ async function executeTool(name: string, args: any): Promise<unknown> {
       return readMemory(args);
     case "transfer_to_savings":
       return transferToSavings(args);
+    case "calculate_safe_to_spend":
+      return calculateSafeToSpend(args);
+    case "propose_challenge":
+      return proposeChallenge(args);
+    case "analyze_discounts":
+      return analyzeDiscounts(args);
+    case "get_calendar_events":
+      return getCalendarEvents(args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

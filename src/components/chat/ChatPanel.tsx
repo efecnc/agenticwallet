@@ -5,7 +5,8 @@ import { useAppStore } from "@/store/app-store";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import ToolCallIndicator from "./ToolCallIndicator";
-import { Bot } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ChatPanel() {
   const chatMessages = useAppStore((s) => s.chatMessages);
@@ -16,68 +17,87 @@ export default function ChatPanel() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [chatMessages, isChatLoading]);
 
-  return (
-    <div className="flex flex-col h-full bg-brand-dark/50">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
-        <div className="w-8 h-8 rounded-full bg-brand-teal/20 flex items-center justify-center">
-          <Bot className="w-4 h-4 text-brand-teal" />
-        </div>
-        <div>
-          <div className="text-sm font-semibold">Parafin AI</div>
-          <div className="text-xs text-slate-400">Finansal asistanın</div>
-        </div>
-      </div>
+  const isEmpty = chatMessages.length === 0;
 
-      {/* Messages area */}
+  return (
+    <div className="flex flex-col h-full min-h-0" role="region" aria-label="Parafin sohbet paneli">
+      {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4"
+        className="flex-1 overflow-y-auto scrollbar-thin min-h-0"
+        role="log"
+        aria-live="polite"
+        aria-label="Sohbet mesajları"
       >
-        {chatMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-16 h-16 rounded-full bg-brand-teal/10 flex items-center justify-center mb-4">
-              <Bot className="w-8 h-8 text-brand-teal" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Selam! Ben Parafin</h3>
-            <p className="text-sm text-slate-400 max-w-sm">
-              Yapay zeka destekli finansal asistanın. Harcamalarını, birikim hedeflerini veya parayla ilgili her şeyi sorabilirsin!
-            </p>
-
-            {/* Suggested Prompts */}
-            <div className="mt-6 space-y-2">
-              {[
-                "Bu ay markete ne kadar harcadım?",
-                "Harcama dağılımım nasıl?",
-                "Tatil için biraz para biriktirebilir misin?",
-              ].map((suggestion) => (
-                <button
-                  key={suggestion}
-                  onClick={() => sendMessage(suggestion)}
-                  className="block w-full text-left text-sm px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-slate-300 transition-colors"
+        <AnimatePresence mode="wait">
+          {isEmpty ? (
+            <motion.div
+              key="welcome"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center h-full px-6"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200 }}
+                className="relative mb-5"
+              >
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-teal/15 to-emerald-600/5 flex items-center justify-center">
+                  <Bot className="w-8 h-8 text-brand-teal/80" aria-hidden="true" />
+                </div>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center"
                 >
-                  {suggestion}
-                </button>
+                  <Sparkles className="w-3 h-3 text-white" aria-hidden="true" />
+                </motion.div>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-sm text-slate-400 text-center max-w-[200px] leading-relaxed"
+              >
+                Finansal asistanın hazır. Ne sormak istersin?
+              </motion.p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="messages"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-4 pt-4 pb-2 space-y-0.5"
+            >
+              {chatMessages.map((msg) => (
+                <ChatMessage key={msg.id} message={msg} />
               ))}
-            </div>
-          </div>
-        )}
 
-        {chatMessages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
-        ))}
-
-        {isChatLoading && currentToolCall && (
-          <ToolCallIndicator label={currentToolCall} />
-        )}
+              {isChatLoading && (
+                <ToolCallIndicator label={currentToolCall} />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Input */}
-      <ChatInput onSend={sendMessage} disabled={isChatLoading} />
+      {/* Input with inline quick actions */}
+      <ChatInput
+        onSend={sendMessage}
+        disabled={isChatLoading}
+        showSuggestions={isEmpty}
+      />
     </div>
   );
 }

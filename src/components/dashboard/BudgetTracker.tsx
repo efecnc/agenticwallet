@@ -7,7 +7,7 @@ import { Target, Plus, X } from "lucide-react";
 
 interface Budget {
   category: string;
-  limit: number; // in TRY
+  limit: number;
 }
 
 const STORAGE_KEY = "parafin_budgets";
@@ -30,7 +30,6 @@ export default function BudgetTracker() {
   const [newCategory, setNewCategory] = useState("groceries");
   const [newLimit, setNewLimit] = useState("");
 
-  // Load from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -40,7 +39,6 @@ export default function BudgetTracker() {
     }
   }, []);
 
-  // Save to localStorage
   function saveBudgets(updated: Budget[]) {
     setBudgets(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -60,7 +58,6 @@ export default function BudgetTracker() {
     saveBudgets(budgets.filter((b) => b.category !== category));
   }
 
-  // Calculate spent per category (this month, integer math)
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const spentByCategory: Record<string, number> = {};
@@ -82,32 +79,42 @@ export default function BudgetTracker() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.45 }}
       className="glass-card p-6"
+      role="region"
+      aria-label="Bütçe takibi"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-amber-400" />
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+          <Target className="w-4 h-4 text-amber-400" aria-hidden="true" />
+          <h2 className="text-xs font-semibold text-emerald-300/50 uppercase tracking-wider">
             Bütçe Takibi
           </h2>
         </div>
         {availableCategories.length > 0 && (
           <button
             onClick={() => setShowAdd(!showAdd)}
-            className="text-xs text-brand-teal hover:text-emerald-300 flex items-center gap-1 transition-colors"
+            className="w-7 h-7 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] flex items-center justify-center transition-colors focus-ring"
+            aria-label={showAdd ? "Bütçe ekleme formunu kapat" : "Yeni bütçe ekle"}
           >
-            <Plus className="w-3 h-3" />
-            Ekle
+            <Plus className={`w-3.5 h-3.5 text-brand-teal transition-transform duration-200 ${showAdd ? "rotate-45" : ""}`} aria-hidden="true" />
           </button>
         )}
       </div>
 
       {/* Add budget form */}
       {showAdd && (
-        <div className="flex gap-2 mb-4 p-3 bg-white/5 rounded-lg">
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="flex gap-2 mb-4 p-3 bg-white/[0.04] rounded-xl border border-white/[0.06]"
+          role="form"
+          aria-label="Yeni bütçe ekle"
+        >
+          <label className="sr-only" htmlFor="budget-category">Kategori</label>
           <select
+            id="budget-category"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="flex-1 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="flex-1 bg-white/[0.08] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white appearance-none focus-ring"
           >
             {availableCategories.map((c) => (
               <option key={c} value={c}>
@@ -115,24 +122,27 @@ export default function BudgetTracker() {
               </option>
             ))}
           </select>
+          <label className="sr-only" htmlFor="budget-limit">Bütçe limiti (₺)</label>
           <input
+            id="budget-limit"
             type="number"
-            placeholder="Limit (₺)"
+            placeholder="₺ Limit"
             value={newLimit}
             onChange={(e) => setNewLimit(e.target.value)}
-            className="w-28 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500"
+            onKeyDown={(e) => e.key === "Enter" && addBudget()}
+            className="w-24 bg-white/[0.08] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus-ring"
           />
           <button
             onClick={addBudget}
-            className="px-3 py-2 bg-brand-teal text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition-colors"
+            className="px-3 py-2 bg-brand-teal text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors focus-ring"
           >
-            Kaydet
+            Ekle
           </button>
-        </div>
+        </motion.div>
       )}
 
       {budgets.length === 0 ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-[13px] text-slate-600 leading-relaxed">
           Henüz bütçe belirlenmemiş. Harcamalarını kontrol altına almak için bir kategori ekle.
         </p>
       ) : (
@@ -150,41 +160,50 @@ export default function BudgetTracker() {
 
             return (
               <div key={budget.category} className="group">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium capitalize">
+                    <span className="text-sm font-medium">
                       {categoryLabels[budget.category] || budget.category}
                     </span>
                     {isOver && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded-full font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-red-500/15 text-red-400 rounded-full font-semibold" role="alert">
                         Aşıldı!
                       </span>
                     )}
                     {isNear && (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded-full font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/15 text-amber-400 rounded-full font-semibold" role="alert">
                         Dikkat
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 tabular-nums">
-                      ₺{spent.toLocaleString("tr-TR", { minimumFractionDigits: 0 })} / ₺{budget.limit.toLocaleString("tr-TR", { minimumFractionDigits: 0 })}
+                    <span className="text-[11px] text-slate-500 tabular-nums font-medium">
+                      ₺{spent.toLocaleString("tr-TR", { minimumFractionDigits: 0 })}
+                      <span className="text-slate-600"> / ₺{budget.limit.toLocaleString("tr-TR", { minimumFractionDigits: 0 })}</span>
                     </span>
                     <button
                       onClick={() => removeBudget(budget.category)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-white/[0.08] focus-ring"
+                      aria-label={`${categoryLabels[budget.category] || budget.category} bütçesini kaldır`}
                     >
-                      <X className="w-3 h-3 text-slate-500 hover:text-slate-300" />
+                      <X className="w-3 h-3 text-slate-500" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
 
-                <div className="w-full bg-white/5 rounded-full h-2">
+                <div
+                  className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={Math.min(Math.round((spentCents / limitCents) * 100), 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${categoryLabels[budget.category]}: %${percentage} kullanıldı`}
+                >
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className={`h-2 rounded-full ${
+                    className={`h-1.5 rounded-full ${
                       isOver
                         ? "bg-red-500"
                         : isNear

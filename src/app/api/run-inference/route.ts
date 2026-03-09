@@ -101,9 +101,12 @@ Return format (ONLY valid JSON array, no other text):
 
 Focus on:
 - Spending anomalies (any category up/down >25% week-over-week)
-- Upcoming recurring charges
+- Upcoming recurring charges and total monthly subscription burden
 - Savings opportunities
 - Positive trends (spending down in a category)
+- Flag any subscription price increases detected
+- Consider Turkey's ~2% monthly inflation — only flag real behavioral increases above inflation
+- If installment (taksit) data exists in metadata, mention total monthly installment obligations
 `.trim();
 
     const result = await model.generateContent(analysisPrompt);

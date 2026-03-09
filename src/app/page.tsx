@@ -12,13 +12,12 @@ import HealthScore from "@/components/dashboard/HealthScore";
 import WeeklySummary from "@/components/dashboard/WeeklySummary";
 import SpendingTrends from "@/components/dashboard/SpendingTrends";
 import RecurringPayments from "@/components/dashboard/RecurringPayments";
-import QuickActions from "@/components/dashboard/QuickActions";
 import BudgetTracker from "@/components/dashboard/BudgetTracker";
+import TaksitTracker from "@/components/dashboard/TaksitTracker";
+import SavingsStreaks from "@/components/dashboard/SavingsStreaks";
 import ChatPanel from "@/components/chat/ChatPanel";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { MessageCircle, LayoutDashboard } from "lucide-react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const initializeDashboard = useAppStore((s) => s.initializeDashboard);
@@ -32,95 +31,113 @@ export default function Home() {
 
   if (isLoading && !isInitialized) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <LoadingSpinner size="lg" />
-        <p className="text-slate-400 text-sm">Dashboard yükleniyor...</p>
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-label="Parafin yükleniyor">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <span className="text-xl font-bold text-white">P</span>
+          </div>
+          <div className="flex gap-1 mt-1" aria-hidden="true">
+            <div className="typing-dot" />
+            <div className="typing-dot" />
+            <div className="typing-dot" />
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-teal to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
-            P
-          </div>
-          <span className="text-lg font-bold tracking-tight">Parafin</span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-400 hidden sm:block">
-            {format(new Date(), "d MMMM yyyy", { locale: tr })}
-          </span>
-          <div className="w-8 h-8 rounded-full bg-brand-teal/20 flex items-center justify-center text-brand-teal text-sm font-bold">
-            E
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
+    <div className="h-screen flex flex-col bg-brand-dark overflow-hidden">
       <div className="flex-1 flex overflow-hidden">
-        {/* Dashboard panel */}
-        <div
-          className={`flex-1 overflow-y-auto scrollbar-thin p-6 ${
+        {/* Dashboard */}
+        <main
+          className={`flex-1 overflow-y-auto scrollbar-thin ${
             mobileTab === "chat" ? "hidden lg:block" : ""
-          } lg:w-[60%]`}
+          } lg:w-[58%]`}
+          aria-label="Finansal özet"
         >
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className="max-w-xl mx-auto px-4 pt-6 pb-20 lg:pb-6 space-y-3">
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center justify-between mb-2"
+            >
+              <div>
+                <p className="text-emerald-300/40 text-xs font-medium">Merhaba, Efe</p>
+                <h1 className="text-xl font-extrabold tracking-tight -mt-0.5">Dashboard</h1>
+              </div>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/[0.12]">
+                <span className="text-emerald-400 text-sm font-bold">E</span>
+              </div>
+            </motion.div>
+
             <WalletCard />
-            <QuickActions />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div className="grid grid-cols-2 gap-3">
               <HealthScore />
               <WeeklySummary />
             </div>
-            <SavingsGoals />
+
+            <SpendingTrends />
             <ProactiveAlerts />
             <PendingTransfers />
+            <SavingsGoals />
+            <SavingsStreaks />
             <BudgetTracker />
-            <SpendingTrends />
-            <RecurringPayments />
+            <TaksitTracker />
             <TransactionList />
+            <RecurringPayments />
             <SpendingChart />
           </div>
-        </div>
+        </main>
 
-        {/* Chat panel */}
-        <div
-          className={`lg:w-[40%] lg:border-l border-white/10 ${
+        {/* Chat */}
+        <aside
+          className={`lg:w-[42%] lg:border-l border-emerald-500/[0.06] ${
             mobileTab === "dashboard" ? "hidden lg:flex" : "flex"
           } flex-col w-full`}
+          aria-label="Parafin sohbet"
         >
           <ChatPanel />
-        </div>
+        </aside>
       </div>
 
-      {/* Mobile tab bar */}
-      <div className="lg:hidden flex border-t border-white/10">
-        <button
-          onClick={() => setMobileTab("dashboard")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-            mobileTab === "dashboard"
-              ? "text-brand-teal bg-brand-teal/10"
-              : "text-slate-400"
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-          Panel
-        </button>
-        <button
-          onClick={() => setMobileTab("chat")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-            mobileTab === "chat"
-              ? "text-brand-teal bg-brand-teal/10"
-              : "text-slate-400"
-          }`}
-        >
-          <MessageCircle className="w-5 h-5" />
-          Sohbet
-        </button>
-      </div>
+      {/* Mobile tab — floating pill */}
+      <nav className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50" aria-label="Mobil navigasyon">
+        <div className="flex bg-brand-dark/90 backdrop-blur-xl rounded-2xl border border-emerald-500/[0.12] shadow-2xl shadow-emerald-900/30 p-1" role="tablist">
+          <button
+            onClick={() => setMobileTab("dashboard")}
+            role="tab"
+            aria-selected={mobileTab === "dashboard"}
+            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all focus-ring ${
+              mobileTab === "dashboard"
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                : "text-slate-500"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
+            Özet
+          </button>
+          <button
+            onClick={() => setMobileTab("chat")}
+            role="tab"
+            aria-selected={mobileTab === "chat"}
+            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all focus-ring ${
+              mobileTab === "chat"
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                : "text-slate-500"
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" aria-hidden="true" />
+            Parafin
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

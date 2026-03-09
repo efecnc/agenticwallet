@@ -326,22 +326,141 @@ function generateTransactions(): TransactionRecord[] {
     metadata: { one_time: true },
   });
 
+  // INSTALLMENT (TAKSİT) PLANS — generate monthly installment transactions
+  const installmentPlans = [
+    { merchant: "Apple Store", description: "MacBook Taksit", totalInstallments: 6, monthlyAmount: 708.33, startMonthOffset: -4, category: "shopping", subcategory: "electronics" },
+    { merchant: "Trendyol", description: "Kış Montu Taksit", totalInstallments: 3, monthlyAmount: 416.67, startMonthOffset: -2, category: "shopping", subcategory: null },
+    { merchant: "Hepsiburada", description: "Kulaklık Taksit", totalInstallments: 4, monthlyAmount: 374.75, startMonthOffset: -3, category: "shopping", subcategory: "electronics" },
+  ];
+
+  for (const plan of installmentPlans) {
+    const planStartDate = new Date(currentYear, currentMonth + plan.startMonthOffset, 10);
+    for (let inst = 0; inst < plan.totalInstallments; inst++) {
+      const instDate = new Date(planStartDate.getFullYear(), planStartDate.getMonth() + inst, 10, 10, 0, 0);
+      if (instDate > now || instDate < twoMonthsAgo) continue;
+
+      const currentInstallment = inst + 1;
+      transactions.push({
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        wallet_id: DEV_WALLET_ID,
+        type: "expense",
+        amount: plan.monthlyAmount,
+        currency: "TRY",
+        category: plan.category,
+        subcategory: plan.subcategory,
+        merchant: plan.merchant,
+        description: `${plan.description} (${currentInstallment}/${plan.totalInstallments})`,
+        occurred_at: instDate.toISOString(),
+        is_recurring: false,
+        metadata: {
+          installment: {
+            current: currentInstallment,
+            total: plan.totalInstallments,
+            monthly_amount: plan.monthlyAmount,
+            start_date: planStartDate.toISOString().split("T")[0],
+            description: plan.description,
+          },
+        },
+      });
+    }
+  }
+
+  // DISCOUNT-VARIANT TRANSACTIONS — below-average purchases to trigger discount detection
+  const discountDeals = [
+    { merchant: "Migros", category: "groceries", normalMin: 150, normalMax: 650, discountAmount: 95, description: "İndirimli alışveriş" },
+    { merchant: "Starbucks", category: "coffee", normalMin: 80, normalMax: 180, discountAmount: 55, description: "Happy hour" },
+    { merchant: "CarrefourSA", category: "groceries", normalMin: 200, normalMax: 800, discountAmount: 120, description: "Hafta sonu indirimi" },
+  ];
+
+  for (const deal of discountDeals) {
+    // Add 1-2 discount transactions in current month
+    const dealCount = 1 + (Math.random() > 0.5 ? 1 : 0);
+    for (let d = 0; d < dealCount; d++) {
+      const dealDay = 1 + Math.floor(Math.random() * Math.min(now.getDate(), 28));
+      const dealDate = new Date(currentYear, currentMonth, dealDay, randomHour(), Math.floor(Math.random() * 60));
+      if (dealDate > now) continue;
+
+      transactions.push({
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        wallet_id: DEV_WALLET_ID,
+        type: "expense",
+        amount: deal.discountAmount,
+        currency: "TRY",
+        category: deal.category,
+        subcategory: deal.category === "coffee" ? "coffee" : null,
+        merchant: deal.merchant,
+        description: deal.description,
+        occurred_at: dealDate.toISOString(),
+        is_recurring: false,
+        metadata: { discount: true },
+      });
+    }
+  }
+
   return transactions;
 }
 
+export const maxDuration = 60;
+
 export async function POST() {
   try {
-    // Delete existing mock data (idempotent)
-    await supabaseAdmin.from("chat_messages").delete().eq("user_id", DEV_USER_ID);
-    await supabaseAdmin.from("proactive_insights").delete().eq("user_id", DEV_USER_ID);
-    await supabaseAdmin.from("user_memory").delete().eq("user_id", DEV_USER_ID);
-    await supabaseAdmin.from("wallet_transfers").delete().eq("user_id", DEV_USER_ID);
-    await supabaseAdmin.from("transactions").delete().eq("user_id", DEV_USER_ID);
+    // Delete existing mock data (idempotent) — run in parallel
+    await Promise.all([
+      supabaseAdmin.from("chat_messages").delete().eq("user_id", DEV_USER_ID),
+      supabaseAdmin.from("proactive_insights").delete().eq("user_id", DEV_USER_ID),
+      supabaseAdmin.from("user_memory").delete().eq("user_id", DEV_USER_ID),
+      supabaseAdmin.from("wallet_transfers").delete().eq("user_id", DEV_USER_ID),
+      supabaseAdmin.from("transactions").delete().eq("user_id", DEV_USER_ID),
+    ]);
 
-    // Generate and insert transactions
+    // ─── UPSERT WALLETS ───
+    const savingsGoal1Id = "s1a2b3c4-d5e6-7890-abcd-ef1234567890";
+    const savingsGoal2Id = "s2a2b3c4-d5e6-7890-abcd-ef1234567890";
+
+    const wallets = [
+      {
+        id: DEV_WALLET_ID,
+        user_id: DEV_USER_ID,
+        type: "main",
+        name: "Ana Hesap",
+        balance: 12500,
+        target_amount: null,
+        color: "#10b981",
+        icon: "wallet",
+        is_active: true,
+      },
+      {
+        id: savingsGoal1Id,
+        user_id: DEV_USER_ID,
+        type: "savings_goal",
+        name: "Acil Durum Fonu",
+        balance: 16000,
+        target_amount: 50000,
+        color: "#10b981",
+        icon: "shield",
+        is_active: true,
+      },
+      {
+        id: savingsGoal2Id,
+        user_id: DEV_USER_ID,
+        type: "savings_goal",
+        name: "Tatil",
+        balance: 4250,
+        target_amount: 25000,
+        color: "#3b82f6",
+        icon: "plane",
+        is_active: true,
+      },
+    ];
+
+    const { error: walletErr } = await supabaseAdmin.from("wallets").upsert(wallets, { onConflict: "id" });
+    if (walletErr) console.error("Wallet seed error:", walletErr);
+
+    // ─── GENERATE AND INSERT TRANSACTIONS ───
     const transactions = generateTransactions();
 
-    // Insert in batches of 100
     for (let i = 0; i < transactions.length; i += 100) {
       const batch = transactions.slice(i, i + 100);
       const { error } = await supabaseAdmin.from("transactions").insert(batch);
@@ -351,9 +470,138 @@ export async function POST() {
       }
     }
 
+    // ─── SEED PROACTIVE INSIGHTS ───
+    const now = new Date();
+    const insights = [
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        title: "Yemek harcaman %40 arttı",
+        body: "Bu hafta yemek ve restoran kategorisinde geçen haftaya göre ₺1.240 daha fazla harcadın. Evde yemek yaparak tasarruf edebilirsin.",
+        severity: "warning",
+        category: "dining",
+        is_read: false,
+        is_dismissed: false,
+        metadata: {},
+      },
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        title: "Ulaşım giderin azaldı",
+        body: "Bu hafta ulaşım harcaman geçen haftaya göre %18 düştü. İstanbulkart kullanımını artırman işe yaradı!",
+        severity: "positive",
+        category: "transport",
+        is_read: false,
+        is_dismissed: false,
+        metadata: {},
+      },
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        title: "Netflix yenileniyor",
+        body: "5 gün sonra Netflix aboneliğin ₺149.99 olarak yenilenecek. İzleme oranın düşük — iptal etmeyi düşünebilirsin.",
+        severity: "info",
+        category: "subscription",
+        is_read: false,
+        is_dismissed: false,
+        metadata: {},
+      },
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        title: "Acil Durum Fonu büyüyor",
+        body: "Acil Durum Fonun ₺16.000'e ulaştı — hedefinin %32'si tamamlandı. Bu tempoda 14 ayda hedefe ulaşırsın.",
+        severity: "positive",
+        category: null,
+        is_read: false,
+        is_dismissed: false,
+        metadata: {},
+      },
+    ];
+
+    const { error: insightErr } = await supabaseAdmin.from("proactive_insights").insert(insights);
+    if (insightErr) console.error("Insight seed error:", insightErr);
+
+    // ─── SEED A CHALLENGE INSIGHT (for SavingsStreaks) ───
+    const challengeEndDate = new Date(now);
+    challengeEndDate.setDate(challengeEndDate.getDate() + 4);
+
+    const challengeInsight = {
+      id: uuidv4(),
+      user_id: DEV_USER_ID,
+      title: "Kahve Challenge: 7 gün kahveciye gitme!",
+      body: "7 gün boyunca dışarıdan kahve almadan geçir. Haftada ortalama ₺320 tasarruf edebilirsin.",
+      severity: "info" as const,
+      category: "challenge",
+      is_read: false,
+      is_dismissed: false,
+      metadata: {
+        duration_days: 7,
+        start_date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        end_date: challengeEndDate.toISOString().split("T")[0],
+        status: "active",
+      },
+    };
+
+    await supabaseAdmin.from("proactive_insights").insert(challengeInsight);
+
+    // ─── SEED PENDING WALLET TRANSFERS ───
+    const transfers = [
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        from_wallet_id: DEV_WALLET_ID,
+        to_wallet_id: savingsGoal1Id,
+        amount: 2000,
+        status: "pending_confirmation",
+        reason: "Bu ay yemek harcaman düştü — farkı Acil Durum Fonu'na aktararak hedefine yaklaşabilirsin.",
+        initiated_by: "ai_agent",
+      },
+      {
+        id: uuidv4(),
+        user_id: DEV_USER_ID,
+        from_wallet_id: DEV_WALLET_ID,
+        to_wallet_id: savingsGoal2Id,
+        amount: 750,
+        status: "pending_confirmation",
+        reason: "Geçen hafta ulaşımda ₺750 tasarruf ettin. Tatil fonuna aktarmak ister misin?",
+        initiated_by: "ai_agent",
+      },
+    ];
+
+    const { error: transferErr } = await supabaseAdmin.from("wallet_transfers").insert(transfers);
+    if (transferErr) console.error("Transfer seed error:", transferErr);
+
+    // ─── SEED USER MEMORIES ───
+    const memories = [
+      { type: "fact", content: "Annemin doğum günü 22 Mart", confidence: 1.0 },
+      { type: "fact", content: "En yakın arkadaşımın doğum günü 5 Nisan", confidence: 1.0 },
+      { type: "fact", content: "Maaş günüm her ayın 15'i", confidence: 1.0 },
+      { type: "preference", content: "Starbucks yerine evde filtre kahve tercih ediyorum", confidence: 0.9 },
+      { type: "goal", content: "Yaz tatili için Yunanistan'a gitmek istiyorum", confidence: 1.0 },
+      { type: "rule", content: "Ayda ₺2.000'den fazla yemek harcamamalıyım", confidence: 0.8 },
+      { type: "pattern", content: "Hafta sonları daha fazla yemek siparişi veriyorum", confidence: 0.7 },
+    ];
+
+    const memoryRows = memories.map((mem) => ({
+      id: uuidv4(),
+      user_id: DEV_USER_ID,
+      type: mem.type,
+      content: mem.content,
+      confidence: mem.confidence,
+      source: "seed",
+      is_active: true,
+    }));
+    const { error: memoryErr } = await supabaseAdmin.from("user_memory").insert(memoryRows);
+    if (memoryErr) console.error("Memory seed error:", memoryErr);
+
     return NextResponse.json({
       seeded: true,
       transactionCount: transactions.length,
+      insightCount: insights.length + 1,
+      transferCount: transfers.length,
+      memoryCount: memories.length,
+      walletCount: wallets.length,
     });
   } catch (err) {
     console.error("Seed error:", err);

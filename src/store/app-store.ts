@@ -3,10 +3,20 @@ import type { Wallet, Transaction, ProactiveInsight, WalletTransfer } from "@/ty
 import type { ChatMessageUI, ChatResponse } from "@/types/chat";
 import { v4 as uuidv4 } from "uuid";
 
+interface SafeToSpendData {
+  safe_to_spend: number;
+  daily_budget: number;
+  days_until_payday: number;
+}
+
 interface AppState {
   // Wallets
   wallets: Wallet[];
   loadWallets: () => Promise<void>;
+
+  // Safe to spend
+  safeToSpend: SafeToSpendData | null;
+  loadSafeToSpend: () => Promise<void>;
 
   // Transactions
   transactions: Transaction[];
@@ -43,6 +53,10 @@ const toolCallLabels: Record<string, string> = {
   save_memory: "Hafızaya kaydediliyor...",
   read_memory: "Hafıza kontrol ediliyor...",
   transfer_to_savings: "Transfer hazırlanıyor...",
+  calculate_safe_to_spend: "Harcama bütçesi hesaplanıyor...",
+  propose_challenge: "Meydan okuma hazırlanıyor...",
+  analyze_discounts: "İndirimler analiz ediliyor...",
+  get_calendar_events: "Takvim kontrol ediliyor...",
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -55,6 +69,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ wallets: data.wallets || [] });
     } catch (err) {
       console.error("Failed to load wallets:", err);
+    }
+  },
+
+  // Safe to spend
+  safeToSpend: null,
+  loadSafeToSpend: async () => {
+    try {
+      const res = await fetch("/api/safe-to-spend");
+      const data = await res.json();
+      if (data.safe_to_spend !== undefined) {
+        set({
+          safeToSpend: {
+            safe_to_spend: data.safe_to_spend,
+            daily_budget: data.daily_budget,
+            days_until_payday: data.days_until_payday,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load safe-to-spend:", err);
     }
   },
 
@@ -279,7 +313,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ isInitialized: true, isLoading: false });
 
-    // Run inference in background after initial load
+    // Run inference and load safe-to-spend in background after initial load
     get().runInference();
+    get().loadSafeToSpend();
   },
 }));
